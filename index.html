@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e8eef6">
+<title>Dompetku — Web3 Wallet</title>
+<link rel="stylesheet" href="style.css?v=564">
+<link rel="icon" type="image/png" href="logo.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<div id="debug-box"></div>
+
+<!-- ============ AUTH ============ -->
+<section id="auth-screen" class="screen active">
+  <div class="auth-wrap">
+    <div class="logo-block">
+      <div class="logo-orb"><img src="logo.png" alt="Dompetku"></div>
+      <h1>Dompetku</h1>
+      <p data-i18n="tagline">Decentralized wallet · v3.0</p>
+    </div>
+
+    <div class="auth-lang-wrap" id="auth-lang-row">
+      <button type="button" class="auth-world-btn" id="auth-world-btn" onclick="toggleAuthLangDrop()" title="Language">
+        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </button>
+      <div class="auth-lang-drop" id="auth-lang-drop">
+        <button type="button" data-lang="id" onclick="setLang('id');toggleAuthLangDrop()">🇮🇩 Bahasa Indonesia</button>
+        <button type="button" data-lang="en" onclick="setLang('en');toggleAuthLangDrop()">🇺🇸 English</button>
+        <button type="button" data-lang="zh" onclick="setLang('zh');toggleAuthLangDrop()">🇨🇳 中文</button>
+        <button type="button" data-lang="ko" onclick="setLang('ko');toggleAuthLangDrop()">🇰🇷 한국어</button>
+        <button type="button" data-lang="th" onclick="setLang('th');toggleAuthLangDrop()">🇹🇭 ไทย</button>
+        <button type="button" data-lang="ar" onclick="setLang('ar');toggleAuthLangDrop()">🇸🇦 العربية</button>
+        <button type="button" data-lang="hi" onclick="setLang('hi');toggleAuthLangDrop()">🇮🇳 हिन्दी</button>
+      </div>
+    </div>
+
+    <div id="login-box" class="glass-card">
+      <h2 data-i18n="login">Masuk</h2>
+      <div class="field">
+        <label data-i18n="wallet_id">Wallet ID</label>
+        <input type="text" id="login-id" placeholder="username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label data-i18n="passphrase">Passphrase</label>
+        <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()" data-i18n="connect">Connect Wallet</button>
+      <p class="switch"><span data-i18n="no_wallet">Belum punya wallet?</span> <a onclick="toggleAuth()" data-i18n="create_new">Buat Baru</a></p>
+    </div>
+
+    <div id="register-box" class="glass-card" style="display:none">
+      <h2 data-i18n="create_wallet">Buat Wallet</h2>
+      <div class="field">
+        <label data-i18n="wallet_id">Wallet ID</label>
+        <input type="text" id="reg-id" placeholder="min 3 karakter" autocomplete="username">
+      </div>
+      <div class="field">
+        <label data-i18n="passphrase">Passphrase</label>
+        <input type="password" id="reg-pw" placeholder="min 6 karakter" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" onclick="handleRegister()" data-i18n="create_btn">Create Wallet</button>
+      <p class="switch"><span data-i18n="have_wallet">Sudah punya?</span> <a onclick="toggleAuth()" data-i18n="login_link">Masuk</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<section id="app-screen" class="screen">
+  <header class="app-header">
+    <div class="header-actions">
+      <button id="lang-btn" onclick="openLangModal()" title="Language & Currency">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="lbl">Lang</span>
+      </button>
+      <button onclick="showMyQR()" title="QR Wallet">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M14 14h3v3h-3z"/>
+          <path d="M20 14v3M14 20h3M20 20v.01"/>
+        </svg>
+        <span class="lbl">QR</span>
+      </button>
+      <button id="dk-chat-btn" onclick="dkChatOpen()" title="Chat">
+        <svg viewBox="0 0 24 24">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+        </svg>
+        <span class="lbl">Chat</span>
+        <span id="dk-chat-notif"></span>
+      </button>
+      <button id="btc-topbar-btn" onclick="DKBTC && DKBTC.open()" title="Bitcoin Wallet">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.5 8h4.2a2.2 2.2 0 0 1 0 4.4H9.5z"/><path d="M9.5 12.4h4.6a2.2 2.2 0 0 1 0 4.4H9.5z"/><path d="M11 7v1.2M11 16.8V18M13 7v1.2M13 16.8V18"/></svg>
+        <span class="lbl">BTC</span>
+      </button>
+      <button id="mp-topbar-btn" type="button" onclick="typeof MP_open==='function'&&MP_open()" title="Marketplace">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="lbl">Market</span>
+      </button>
+      <button onclick="handleLogout()" title="Disconnect">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="lbl" data-i18n="logout">Keluar</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="balance-hero">
+      <div class="hero-bg"></div>
+      <div class="hero-content">
+        <span class="hero-label" data-i18n="total_balance">◈ Total Balance</span>
+        <h1 id="balance-display">Rp 0</h1>
+        <p class="hero-sub">Wallet <b id="hero-uid">user</b> · <span id="cur-label">IDR</span></p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-hero btn-topup" onclick="openTopup()">
+          <span class="icon">↓</span> <span data-i18n="topup">Top Up</span>
+        </button>
+        <button class="btn-hero btn-send" onclick="openExpense()">
+          <span class="icon">↑</span> <span data-i18n="send">Kirim</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="chart-block glass-card">
+      <div class="block-head">
+        <h3 data-i18n="portfolio">Portfolio</h3>
+        <span class="tag">Live</span>
+      </div>
+      <div class="portfolio-user-row" id="portfolio-user-row">
+        <div class="portfolio-logo-wrap">
+          <img src="logo.png" alt="Dompetku" class="portfolio-logo">
+        </div>
+        <div class="portfolio-user-info">
+          <div class="portfolio-uid" id="portfolio-uid">—</div>
+          <div class="portfolio-status"><span class="dot"></span> <span data-i18n="connected">Connected</span></div>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="financeChart"></canvas></div>
+      <div class="pct-row">
+        <div class="pct-card inc">
+          <div class="pct-val" id="pct-in">0%</div>
+          <div class="pct-lbl" data-i18n="income">Pemasukan</div>
+        </div>
+        <div class="pct-card exp">
+          <div class="pct-val" id="pct-out">0%</div>
+          <div class="pct-lbl" data-i18n="expense">Pengeluaran</div>
+        </div>
+      </div>
+      <div class="month-row" id="month-btns"></div>
+      <div class="month-summary" id="month-summary" style="display:none"></div>
+      <div class="pdf-report-row" id="pdf-report-row">
+        <select id="pdf-month"></select>
+        <select id="pdf-year"></select>
+        <button type="button" class="btn-pdf" onclick="downloadMonthPDF()">⬇ PDF Laporan</button>
+      </div>
+    </section>
+
+    <section class="history-block">
+      <div class="block-head">
+        <h3 data-i18n="history">Riwayat Transaksi</h3>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </section>
+  </main>
+</section>
+
+<!-- ============ MODAL: LANG + CURRENCY ============ -->
+<div id="lang-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 data-i18n="lang_currency">Bahasa & Mata Uang</h3>
+      <button class="x" onclick="closeLangModal()">✕</button>
+    </div>
+    <p class="hint" style="margin-bottom:12px" data-i18n="choose_lang">Pilih bahasa</p>
+    <div class="lang-grid" id="lang-grid">
+      <button class="lang-opt" data-lang="id" onclick="setLang('id')"><b>🇮🇩 Bahasa Indonesia</b><small>Indonesia</small></button>
+      <button class="lang-opt" data-lang="en" onclick="setLang('en')"><b>🇺🇸 English (US)</b><small>United States</small></button>
+      <button class="lang-opt" data-lang="zh" onclick="setLang('zh')"><b>🇨🇳 中文</b><small>Chinese</small></button>
+      <button class="lang-opt" data-lang="ko" onclick="setLang('ko')"><b>🇰🇷 한국어</b><small>Korean</small></button>
+      <button class="lang-opt" data-lang="th" onclick="setLang('th')"><b>🇹🇭 ไทย</b><small>Thai</small></button>
+      <button class="lang-opt" data-lang="ar" onclick="setLang('ar')"><b>🇸🇦 العربية</b><small>Arabic</small></button>
+      <button class="lang-opt" data-lang="hi" onclick="setLang('hi')"><b>🇮🇳 हिन्दी</b><small>Hindi</small></button>
+    </div>
+    <p class="hint" style="margin:16px 0 8px" data-i18n="choose_currency">Pilih mata uang</p>
+    <div class="cur-grid" id="cur-grid">
+      <button class="cur-opt" data-cur="IDR" onclick="setCurrency('IDR')">Rp IDR</button>
+      <button class="cur-opt" data-cur="USD" onclick="setCurrency('USD')">$ USD</button>
+      <button class="cur-opt" data-cur="CNY" onclick="setCurrency('CNY')">¥ CNY</button>
+      <button class="cur-opt" data-cur="KRW" onclick="setCurrency('KRW')">₩ KRW</button>
+      <button class="cur-opt" data-cur="THB" onclick="setCurrency('THB')">฿ THB</button>
+      <button class="cur-opt" data-cur="SAR" onclick="setCurrency('SAR')">﷼ SAR</button>
+      <button class="cur-opt" data-cur="INR" onclick="setCurrency('INR')">₹ INR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: TOPUP ============ -->
+<div id="topup-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 data-i18n="topup_title">Top Up Saldo</h3>
+      <button class="x" onclick="closeTopup()">✕</button>
+    </div>
+    <div class="field">
+      <label data-i18n="amount">Nominal</label>
+      <div class="amount-input">
+        <span id="topup-cur-sym">Rp</span>
+        <input type="number" id="topup-amount" placeholder="0" inputmode="numeric">
+      </div>
+      <p id="topup-hint" class="hint">Min Rp 10.000 (iPaymu)</p>
+    </div>
+    <div class="field">
+      <label data-i18n="description">Keterangan</label>
+      <input type="text" id="topup-desc" placeholder="Top up saldo" maxlength="120">
+    </div>
+    <div class="field">
+      <label data-i18n="method">Metode</label>
+      <select id="topup-method" onchange="onMethodChange()">
+        <option value="qris">QRIS · iPaymu sandbox</option>
+        <option value="va">Virtual Account · iPaymu sandbox</option>
+      </select>
+    </div>
+    <div class="field" id="bank-field" style="display:none">
+      <label>Bank</label>
+      <select id="topup-bank">
+        <option value="bca">BCA</option>
+        <option value="bri">BRI</option>
+        <option value="mandiri">Mandiri</option>
+        <option value="bni">BNI</option>
+      </select>
+    </div>
+    <button id="topup-btn" class="btn btn-primary" onclick="submitTopup()" data-i18n="generate_pay">Generate Payment</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: EXPENSE ============ -->
+<div id="expense-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="exp-title" data-i18n="send_title">Kirim Saldo</h3>
+      <button class="x" onclick="closeExpense()">✕</button>
+    </div>
+
+    <div id="exp-menu">
+      <p class="hint" data-i18n="choose_send">Pilih metode pengiriman:</p>
+      <button class="method-btn" onclick="openExpSub('scan')">
+        <span class="m-icon">📷</span>
+        <div><b data-i18n="scan_qr">Scan QR</b><small data-i18n="scan_qr_sub">Kamera · scan QR wallet tujuan</small></div>
+      </button>
+      <button class="method-btn" onclick="openExpSub('upload')">
+        <span class="m-icon">🖼️</span>
+        <div><b data-i18n="upload_qr">Upload QR</b><small data-i18n="upload_qr_sub">Pilih gambar QR dari galeri</small></div>
+      </button>
+      <button class="method-btn" onclick="openExpSub('id')">
+        <span class="m-icon">👤</span>
+        <div><b data-i18n="send_id">Kirim ke ID</b><small data-i18n="send_id_sub">Transfer langsung ke wallet ID (instan)</small></div>
+      </button>
+    </div>
+
+    <div id="exp-form" style="display:none">
+      <div id="exp-target-box" class="target-box" style="display:none">
+        <span class="tg-label" data-i18n="recipient">Penerima</span>
+        <b id="exp-target-id">-</b>
+      </div>
+      <div class="field" id="exp-id-field" style="display:none">
+        <label data-i18n="recipient_id">Wallet ID Penerima</label>
+        <input type="text" id="exp-recipient" placeholder="username" maxlength="50">
+        <button class="btn btn-ghost btn-sm" onclick="checkRecipient()" data-i18n="check_wallet">Cek Wallet</button>
+        <p id="recipient-status" class="hint"></p>
+      </div>
+      <div class="field">
+        <label data-i18n="amount">Nominal</label>
+        <div class="amount-input">
+          <span id="exp-cur-sym">Rp</span>
+          <input type="number" id="expense-amount" placeholder="0" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="description">Keterangan</label>
+        <input type="text" id="expense-desc" placeholder="Keterangan" maxlength="120">
+      </div>
+      <button class="btn btn-primary" id="exp-submit" onclick="submitExpense()" data-i18n="send">Kirim</button>
+      <button class="btn btn-ghost btn-sm" onclick="backToMenu()" style="margin-top:8px">← <span data-i18n="back">Kembali</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: PAY ============ -->
+<div id="pay-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="pay-title">Pembayaran</h3>
+      <button class="x" onclick="closePay()">✕</button>
+    </div>
+    <div id="pay-body"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: MY QR ============ -->
+<div id="myqr-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 data-i18n="my_qr">QR Wallet Saya</h3>
+      <button class="x" onclick="closeMyQR()">✕</button>
+    </div>
+    <p class="hint center" data-i18n="show_qr">Bagikan QR ini agar orang bisa kirim saldo ke kamu</p>
+    <div id="myqr-box" class="qr-wrap"></div>
+    <div class="target-box" style="display:block;text-align:center;margin:12px 0">
+      <span class="tg-label">Wallet ID</span>
+      <b id="myqr-id">-</b>
+    </div>
+    <button class="btn btn-primary" onclick="downloadMyQR()">⬇ <span data-i18n="download_qr">Unduh QR</span></button>
+  </div>
+</div>
+
+<!-- ============ MODAL: SCAN ============ -->
+<div id="scan-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 data-i18n="scan_qr">Scan QR</h3>
+      <button class="x" onclick="closeScan()">✕</button>
+    </div>
+    <p class="hint center" data-i18n="point_camera">Arahkan kamera ke QR Dompetku</p>
+    <div class="scan-wrap">
+      <video id="scan-video" autoplay playsinline muted></video>
+      <div class="scan-frame"></div>
+    </div>
+    <p id="scan-status" class="hint center">Menunggu kamera...</p>
+    <button class="btn btn-ghost btn-sm" onclick="switchCamera()" data-i18n="switch_cam">Ganti Kamera</button>
+  </div>
+</div>
+
+<input type="file" id="upload-qr" accept="image/*" style="display:none">
+
+<!-- ============ MODAL: BTC WALLET ============ -->
+<div id="btc-modal" class="modal" style="display:none">
+  <div class="modal-card btc-modal-card">
+    <div class="modal-head">
+      <h3><span class="btc-mark">₿</span> Dompet Bitcoin</h3>
+      <button class="x" type="button" onclick="DKBTC&&DKBTC.close()">✕</button>
+    </div>
+
+    <div id="btc-alert" class="btc-alert" hidden></div>
+
+    <!-- Lock / unlock -->
+    <div id="btc-lock-panel">
+      <p id="btc-lock-title" class="hint" style="margin-bottom:14px">Buat atau buka dompet Bitcoin pribadi Anda.</p>
+      <div class="field">
+        <label id="btc-password-label">Kata sandi dompet Bitcoin</label>
+        <input type="password" id="btc-password" placeholder="min 10 karakter" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" id="btc-unlock-btn" type="button" onclick="DKBTC&&DKBTC.unlock()">Buat / Buka Dompet</button>
+      <p class="hint" style="margin-top:12px">Non-custodial · private key terenkripsi di perangkat ini (PBKDF2 + AES-GCM).</p>
+    </div>
+
+    <!-- Recovery phrase (first create) -->
+    <div id="btc-recovery-panel" hidden>
+      <p class="hint" style="margin-bottom:10px;color:#b45309"><b>Catat recovery phrase offline</b> — tanpa frasa ini dompet tidak dapat dipulihkan.</p>
+      <div id="btc-recovery-words" class="btc-recovery-words"></div>
+      <label class="btc-check"><input type="checkbox" id="btc-recovery-confirm"> Saya sudah mencatat recovery phrase secara offline</label>
+      <button class="btn btn-primary" type="button" onclick="DKBTC&&DKBTC.confirmRecovery()" style="margin-top:12px">Lanjut ke Dompet</button>
+    </div>
+
+    <!-- Wallet panel -->
+    <div id="btc-wallet-panel" hidden>
+      <div class="btc-network-pill">Bitcoin Mainnet</div>
+      <div class="btc-balance-box">
+        <div class="hint" id="btc-wallet-label">Saldo Bitcoin</div>
+        <div id="btc-balance" class="btc-balance">0.00000000 BTC</div>
+        <div id="btc-fiat" class="btc-fiat">—</div>
+        <div id="btc-change" class="hint">Saldo dibaca dari jaringan Bitcoin Mainnet</div>
+      </div>
+      <div class="btc-actions">
+        <button class="btn-hero btn-topup" type="button" onclick="DKBTC&&DKBTC.showReceive()"><span id="btc-receive-label">Terima</span></button>
+        <button class="btn-hero btn-send" type="button" onclick="DKBTC&&DKBTC.showSend()"><span id="btc-send-label">Kirim BTC</span></button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="DKBTC&&DKBTC.refresh()"><span id="btc-refresh-label">Perbarui</span></button>
+      </div>
+
+      <div id="btc-receive-panel" hidden>
+        <h4 id="btc-receive-heading" style="margin:14px 0 8px">Alamat penerimaan BTC</h4>
+        <div id="btc-qr" class="qr-wrap"></div>
+        <div class="target-box" style="display:block;text-align:center;word-break:break-all">
+          <span class="tg-label">Address</span>
+          <b id="btc-address">—</b>
+        </div>
+        <button class="btn btn-primary" type="button" onclick="DKBTC&&DKBTC.copyAddress()">Salin Alamat</button>
+      </div>
+
+      <div id="btc-send-panel" hidden>
+        <h4 id="btc-send-heading" style="margin:14px 0 8px">Kirim Bitcoin</h4>
+        <div class="field">
+          <label>Alamat BTC tujuan</label>
+          <input type="text" id="btc-destination" placeholder="bc1…" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Jumlah BTC</label>
+          <input type="number" id="btc-amount" step="0.00000001" min="0" placeholder="0.0001" inputmode="decimal">
+        </div>
+        <div class="btc-fee-row">
+          <span>Estimasi biaya jaringan</span>
+          <b id="btc-fee">—</b>
+        </div>
+        <div class="btc-fee-row">
+          <span>Total perkiraan</span>
+          <b id="btc-total">—</b>
+        </div>
+        <button class="btn btn-primary" id="btc-send-submit" type="button" onclick="DKBTC&&DKBTC.send()">Tinjau &amp; Kirim BTC</button>
+      </div>
+
+      <h4 id="btc-history-heading" style="margin:18px 0 8px">Riwayat Bitcoin</h4>
+      <div id="btc-history-status" class="hint"></div>
+      <div id="btc-history" class="history-list"></div>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="DKBTC&&DKBTC.lock()" style="margin-top:12px">Kunci dompet</button>
+    </div>
+  </div>
+</div>
+
+<script src="i18n.js?v=564"></script>
+<script src="app.js?v=564"></script>
+<script src="chat_v2.js?v=564"></script>
+<script src="gowork.js?v=564"></script>
+<script src="chatworld.js?v=564"></script>
+<script src="marketplace.js?v=564"></script>
+<script src="godrive.js?v=564"></script>
+<script>
+  // Stub diganti otomatis oleh btc.js setelah load
+  window.DKBTC = window.DKBTC || {
+    open: function () {
+      var m = document.getElementById('btc-modal');
+      if (m) { m.classList.add('active'); m.style.display = 'block'; }
+      alert('Modul BTC masih dimuat dari CDN…\nTunggu 2–3 detik lalu tekan BTC lagi.\nJika tetap gagal: hard refresh (Ctrl+Shift+R).');
+    },
+    close: function () {}, unlock: function () {}, confirmRecovery: function () {},
+    showReceive: function () {}, showSend: function () {}, copyAddress: function () {},
+    send: function () {}, refresh: function () {}, lock: function () {}
+  };
+</script>
+<script src="btc.js?v=564"></script>
+</body>
+</html>
